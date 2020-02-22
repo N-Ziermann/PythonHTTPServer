@@ -63,10 +63,10 @@ def https_listener():
     if encryption_working():
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(CERTIFICATE_CHAIN_FILE, CERTIFICATE_KEY_FILE)
-        secureSocket = context.wrap_socket(s, server_side=True)
+        secure_socket = context.wrap_socket(s, server_side=True)
         while True:
             try:
-                thread = threading.Thread(target=handle_https_request,name="thread",args=(secureSocket.accept()))
+                thread = threading.Thread(target=handle_https_request,name="thread",args=(secure_socket.accept()))
                 thread.daemon = True
                 thread.start()
             except:
@@ -75,16 +75,16 @@ def https_listener():
 
 
 def handle_http_request(clientsocket, address):
-    requestString = ""
+    request_string = ""
     try:
-        requestString = clientsocket.recv(4096).decode("utf-8")
+        request_string = clientsocket.recv(4096).decode("utf-8")
     except:
         print("Received encrypted request over HTTP!")      # HTTPS Request over HTTP
         clientsocket.send(b'HTTP/1.1 400 Bad_Request\n')
         print("HTTPS Request over HTTP")
         return
 
-    request = htmlRequestToDict(requestString)
+    request = html_request_to_dict(request_string)
     if REDIRECT_HTTP:
         redirect = "https://" + request["Host"].strip() + request["Path"].strip()
         clientsocket.send(b'HTTP/1.1 301 Moved Permanently\n')
@@ -99,11 +99,11 @@ def handle_http_request(clientsocket, address):
                 with open(PATH_FILES[path]) as file:
                     response = file.read()
             except:
-                send404(clientsocket)                           # File not found
+                send_404(clientsocket)                           # File not found
                 print("File \'" + PATH_FILES[path] + "\' not found")
                 return
         else:
-            send404(clientsocket)                               # Path not set
+            send_404(clientsocket)                               # Path not set
             print("Path \'" + path + "\' not set")
             return
 
@@ -115,8 +115,8 @@ def handle_http_request(clientsocket, address):
 
 
 def handle_https_request(clientsocket, address):
-    requestString = clientsocket.recv(4096).decode("utf-8")
-    request = htmlRequestToDict(requestString)
+    request_string = clientsocket.recv(4096).decode("utf-8")
+    request = html_request_to_dict(request_string)
     path = request["Path"]
     response = ""
 
@@ -125,11 +125,11 @@ def handle_https_request(clientsocket, address):
             with open(PATH_FILES[path]) as file:
                 response = file.read()
         except:
-            send404(clientsocket)                               # File not found
+            send_404(clientsocket)                               # File not found
             print("File \'" + PATH_FILES[path] + "\' not found")
             return
     else:
-        send404(clientsocket)                                   # Path not set
+        send_404(clientsocket)                                   # Path not set
         print("Path \'" + path + "\' not set")
         return
 
@@ -141,27 +141,27 @@ def handle_https_request(clientsocket, address):
 
 
 
-def htmlRequestToDict(request_string):          # makes requests from webbrowsers easier to work with
-    rowSeperated = request_string.split("\n")
-    row1Data = rowSeperated[0].split(" ")
-    requestDict = {"Type":row1Data[0], "Path":row1Data[1]}
-    for i in range(1, len(rowSeperated)):
-        if(len(rowSeperated[i])>1):             # prevent bugs caused by empty rows at end message
+def html_request_to_dict(request_string):          # makes requests from webbrowsers easier to work with
+    row_seperated = request_string.split("\n")
+    row_1_data = row_seperated[0].split(" ")
+    requestDict = {"Type":row_1_data[0], "Path":row_1_data[1]}
+    for i in range(1, len(row_seperated)):
+        if(len(row_seperated[i])>1):             # prevent bugs caused by empty rows at end message
             key = ""
             value = ""
             j = 0
-            while rowSeperated[i][j] != ":":
-                key += rowSeperated[i][j]
+            while row_seperated[i][j] != ":":
+                key += row_seperated[i][j]
                 j+=1
             j+=1    #skip ":"
-            while j < len(rowSeperated[i]):
-                value += rowSeperated[i][j]
+            while j < len(row_seperated[i]):
+                value += row_seperated[i][j]
                 j+=1
             requestDict[key] = value
     return requestDict
 
 
-def send404(client):                            # sends 404 Error to client if something went wrong
+def send_404(client):                            # sends 404 Error to client if something went wrong
     client.send(b'HTTP/1.1 404 Not Found\n')
     client.send(b'Content-Type: text/html\n')
     client.send(b'\n')
