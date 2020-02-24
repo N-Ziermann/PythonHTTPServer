@@ -144,7 +144,7 @@ def handle_https_request(clientsocket, address):
 def html_request_to_dict(request_string):          # makes requests from webbrowsers easier to work with
     row_seperated = request_string.split("\n")
     row_1_data = row_seperated[0].split(" ")
-    requestDict = {"Type":row_1_data[0], "Path":row_1_data[1]}
+    request_dict = {"Type":row_1_data[0], "Path":row_1_data[1]}
     for i in range(1, len(row_seperated)):
         if(len(row_seperated[i])>1):             # prevent bugs caused by empty rows at end message
             key = ""
@@ -157,8 +157,8 @@ def html_request_to_dict(request_string):          # makes requests from webbrow
             while j < len(row_seperated[i]):
                 value += row_seperated[i][j]
                 j+=1
-            requestDict[key] = value
-    return requestDict
+            request_dict[key] = value
+    return request_dict
 
 
 def send_404(client):                            # sends 404 Error to client if something went wrong
