@@ -3,6 +3,7 @@ import socket
 import threading
 import json
 import sys
+import os
 
 ##### configuration:
 PATH_FILES = {                  # "path" : "file"
@@ -11,10 +12,11 @@ PATH_FILES = {                  # "path" : "file"
 }
 
 HTTP_PORT = 80
-URL = "0.0.0.0"
+URL = "0.0.0.0"                 # leaving this at 0.0.0.0 will allow any url that's forwarded to this computer
 MAX_CONNECTIONS = 32
 ENCODING = "utf-8"
-ENCRYPTED = True
+
+ENCRYPTED = False
 #if encryption is turned on:
 CERTIFICATE_CHAIN_FILE = ''             # .cert or .pem file
 CERTIFICATE_KEY_FILE = ''               # .pem file
@@ -25,9 +27,12 @@ REDIRECT_HTTP = True
 
 ##### execution code
 
+directory = os.path.dirname(os.path.abspath(__file__))
+print(directory)
+
 def main():
     if ENCRYPTED:
-        thread = threading.Thread(target=https_listener
+        thread = threading.Thread(target=https_listener)
         thread.daemon = True
         thread.start()
     http_listener()
@@ -96,7 +101,7 @@ def handle_http_request(clientsocket, address):
 
         if path in PATH_FILES:
             try:
-                with open(PATH_FILES[path]) as file:
+                with open(directory + "/sites/" + PATH_FILES[path]) as file:
                     response = file.read()
             except:
                 send_404(clientsocket)                           # File not found
@@ -122,7 +127,7 @@ def handle_https_request(clientsocket, address):
 
     if path in PATH_FILES:
         try:
-            with open(PATH_FILES[path]) as file:
+            with open(directory + "/sites/" + PATH_FILES[path]) as file:
                 response = file.read()
         except:
             send_404(clientsocket)                               # File not found
