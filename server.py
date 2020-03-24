@@ -4,10 +4,11 @@ import threading
 import json
 import sys
 import os
+import re
 
 ##### configuration:
 PATH_FILES = {                  # "path" : "file"
-    "/" : "index.html",
+    "/data" : "index.html",
 
 }
 
@@ -21,14 +22,13 @@ ENCRYPTED = False
 CERTIFICATE_CHAIN_FILE = ''             # .cert or .pem file
 CERTIFICATE_KEY_FILE = ''               # .pem file
 HTTPS_PORT = 443
-REDIRECT_HTTP = True
+REDIRECT_HTTP = False
 
 
 
 ##### execution code
 
 directory = os.path.dirname(os.path.abspath(__file__))
-print(directory)
 
 def main():
     if ENCRYPTED:
@@ -90,7 +90,7 @@ def handle_http_request(clientsocket, address):
         return
 
     request = html_request_to_dict(request_string)
-    if REDIRECT_HTTP:
+    if REDIRECT_HTTP and ENCRYPTED:
         redirect = "https://" + request["Host"].strip() + request["Path"].strip()
         clientsocket.send(b'HTTP/1.1 301 Moved Permanently\n')
         clientsocket.send(bytes('Location: ' + redirect + '\n', ENCODING))
@@ -98,11 +98,35 @@ def handle_http_request(clientsocket, address):
     else:
         path = request["Path"]
         response = ""
+        # if requested path is a file that's mentioned inside an html file (.png, .js, .css etc.)
+        if re.match("^[\w,\s-]+\.[A-Za-z]+$", path.split("/")[-1]):
+            if "Referer" not in request:
+                send_404(clientsocket)                           # File not found
+                print("Path \'" + path + "\' not set")
+                return
+            request_origin = request["Referer"]
+            relative_path = "/" + "/".join(request_origin.split("/")[3:]).replace("\r", "")
+            if relative_path in PATH_FILES:
+                # find fitting folder structure based on part of the page the request came from
+                relative_location = PATH_FILES[relative_path]
+                _ = relative_location.split("/")
+                location = "/".join(_[:len(_)-1])
+                if "/" in relative_location:
+                    location = "/" + location
+                try:
+                    file = open(directory + "/sites" + location + path, "rb")
+                    response = file.read()
+                    file.close()
+                except:
+                    send_404(clientsocket)                               # Path not set
+                    print("Path \'" + location + path + "\' not set")
+                    return
 
-        if path in PATH_FILES:
+        elif path in PATH_FILES:
             try:
                 with open(directory + "/sites/" + PATH_FILES[path]) as file:
                     response = file.read()
+                    response = bytes(response, ENCODING)
             except:
                 send_404(clientsocket)                           # File not found
                 print("File \'" + PATH_FILES[path] + "\' not found")
@@ -115,7 +139,7 @@ def handle_http_request(clientsocket, address):
         clientsocket.send(b'HTTP/1.1 200 OK\n')
         clientsocket.send(b'Content-Type: text/html\n')
         clientsocket.send(b'\n')
-        clientsocket.sendall(bytes(response, ENCODING))
+        clientsocket.sendall(response)
         clientsocket.close()
 
 
@@ -124,8 +148,31 @@ def handle_https_request(clientsocket, address):
     request = html_request_to_dict(request_string)
     path = request["Path"]
     response = ""
-
-    if path in PATH_FILES:
+    # if requested path is a file that's mentioned inside an html file (.png, .js, .css etc.)
+    if re.match("^[\w,\s-]+\.[A-Za-z]+$", path.split("/")[-1]):
+        if "Referer" not in request:
+            send_404(clientsocket)                           # File not found
+            print("Path \'" + path + "\' not set")
+            return
+        request_origin = request["Referer"]
+        relative_path = "/" + "/".join(request_origin.split("/")[3:]).replace("\r", "")
+        if relative_path in PATH_FILES:
+            # find fitting folder structure based on part of the page the request came from
+            relative_location = PATH_FILES[relative_path]
+            _ = relative_location.split("/")
+            location = "/".join(_[:len(_)-1])
+            if "/" in relative_location:
+                location = "/" + location
+            try:
+                file = open(directory + "/sites" + location + path, "rb")
+                response = file.read()
+                file.close()
+            except:
+                send_404(clientsocket)                               # Path not set
+                print("Path \'" + location + path + "\' not set")
+                return
+                
+    elif path in PATH_FILES:
         try:
             with open(directory + "/sites/" + PATH_FILES[path]) as file:
                 response = file.read()
